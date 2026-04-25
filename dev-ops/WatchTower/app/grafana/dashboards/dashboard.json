@@ -8,7 +8,12 @@
     {
       "type": "timeseries",
       "title": "HTTP Request Rate (per sec)",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
       "targets": [
         {
           "expr": "sum by (instance) (rate(http_requests_total[1m]))",
@@ -19,7 +24,12 @@
     {
       "type": "timeseries",
       "title": "Error Rate (5xx per sec)",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
       "targets": [
         {
           "expr": "sum by (instance) (rate(http_requests_total{status=~\"5..\"}[1m]))",
@@ -30,7 +40,12 @@
     {
       "type": "stat",
       "title": "Current Health Status",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
       "targets": [
         {
           "expr": "up",
@@ -48,12 +63,39 @@
             {
               "type": "value",
               "options": {
-                "1": { "text": "UP", "color": "green" },
-                "0": { "text": "DOWN", "color": "red" }
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "DOWN",
+                  "color": "red"
+                }
               }
             }
           ]
         }
+      }
+    },
+    {
+      "type": "logs",
+      "title": "Live Full  Container Logs",
+      "datasource": "Loki",
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "targets": [
+        {
+          "expr": "{job=\"dockerlogs\"}"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "wrapLogMessage": true
       }
     }
   ]

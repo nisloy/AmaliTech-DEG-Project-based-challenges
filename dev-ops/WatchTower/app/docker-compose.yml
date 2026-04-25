@@ -76,3 +76,26 @@ services:
       - ./grafana/dashboards:/etc/grafana/dashboards
     networks:
       - watchtower_network
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - watchtower_network
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    user: root # permission to read the system log files
+    ports:
+      - "9080:9080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro # Allows Promtail to ask Docker for container names
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./loki/promtail-config.yml:/etc/promtail/promtail-config.yml # Ensure the file on your disk is actually named .yml!
+    command: -config.file=/etc/promtail/promtail-config.yml
+    networks:
+      - watchtower_network
