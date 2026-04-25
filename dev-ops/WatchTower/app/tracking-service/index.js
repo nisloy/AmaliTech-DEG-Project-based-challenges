@@ -21,6 +21,9 @@ app.use((req, res, next) => {
   });
   next();
 });
+app.get('/simulate-500', (req, res) => {
+  res.status(500).send('Intentional Server Error for Alert Testing');
+});
 
 const shipments = {
   'SHP-001': { status: 'in_transit', location: 'Accra' },
