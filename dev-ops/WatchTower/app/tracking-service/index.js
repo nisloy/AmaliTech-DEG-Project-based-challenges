@@ -21,9 +21,10 @@ app.use((req, res, next) => {
   });
   next();
 });
-app.get('/simulate-500', (req, res) => {
-  res.status(500).send('Intentional Server Error for Alert Testing');
-});
+// app.get('/simulate-500', (req, res) => {
+//   res.status(500).send('Intentional Server Error for Alert Testing');
+// });
+//uncomment above route to simulate 500 errors for alert testing
 
 const shipments = {
   'SHP-001': { status: 'in_transit', location: 'Accra' },

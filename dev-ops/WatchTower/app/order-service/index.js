@@ -25,6 +25,7 @@ app.use((req, res, next) => {
 const orders = [];
 
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'order-service' }));
+// app.get('/health', (req, res) => res.status(500).json({ status: 'down' }));   uncomment to simulate service failure for alert testing
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', register.contentType);
   res.end(await register.metrics());
