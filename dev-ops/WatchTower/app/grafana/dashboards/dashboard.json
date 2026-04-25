@@ -80,7 +80,10 @@
     {
       "type": "logs",
       "title": "Live Full  Container Logs",
-      "datasource": "Loki",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-datasource"
+      },
       "gridPos": {
         "h": 12,
         "w": 24,
