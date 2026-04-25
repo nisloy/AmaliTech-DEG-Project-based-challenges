@@ -34,3 +34,13 @@ services:
       - PORT=${NOTIFICATION_SERVICE_PORT:-3003}
     networks:
       - watchtower_network
+
+  prometheus:
+    image: prom/prometheus:latest # fetch latest docker image for Prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090" # expose Prometheus on port 9090
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - watchtower_network
