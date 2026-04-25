@@ -1,0 +1,29 @@
+groups:
+  - name: watchtower_alerts
+    rules:
+      - alert: ServiceDown
+        expr: rate(http_requests_total{route="/health", status!~"2.."}[1m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.instance }} /health is failing"
+          description: "The /health endpoint on {{ $labels.instance }} is returning non-200 HTTP statuses."
+
+      - alert: HighErrorRate
+        expr: (sum by(instance)(rate(http_requests_total{status=~"5.."}[5m])) / sum by(instance)(rate(http_requests_total[5m]))) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Error Rate on {{ $labels.instance }}"
+          description: "More than 5% of requests returned 5xx errors over the last 5 minutes."
+
+      - alert: ServiceNotScraping
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Service {{ $labels.instance }} not returning metrics"
+          description: "Prometheus has failed to scrape metrics from {{ $labels.instance }} for more than 2 minutes."
