@@ -84,7 +84,7 @@ graph TD
 
 ## 3. Dashboard Walkthrough
 
-![WatchTower Dashboard](./docs/dashboard.png)
+![WatchTower Dashboard](./docs/dash1.png)
 
 The Grafana dashboard is fully provisioned as code (`grafana/dashboards/dashboard.json`) and loads automatically on container startup. No manual import steps are required.
 
@@ -123,13 +123,13 @@ docker compose start order-service
 **Test procedure:**
 ```bash
 # Disconnect a running container from the shared network
-docker network disconnect app_watchtower_network notification-service
+docker network disconnect watchtower_network notification-service
 
 # The container stays alive but Prometheus can no longer reach it.
 # Wait 2 minutes, then check the Alerts UI for FIRING state.
 
 # Reconnect the service
-docker network connect app_watchtower_network notification-service
+docker network connect watchtower_network notification-service
 ```
 
 ### HighErrorRate (Severity: Warning)
@@ -138,10 +138,10 @@ docker network connect app_watchtower_network notification-service
 **Test procedure:**
 ```bash
 # Hit a route that returns 500 errors in a tight loop
-while true; do curl -s http://localhost:3001/simulate-500 > /dev/null; sleep 0.1; done &
+while true; do curl -s http://localhost:3002/simulate-500 > /dev/null; sleep 0.1; done &
 
 # Simultaneously generate normal traffic to establish a baseline
-while true; do curl -s http://localhost:3001/health > /dev/null; sleep 1; done &
+while true; do curl -s http://localhost:3002/health > /dev/null; sleep 1; done &
 
 # The error ratio exceeds the 5% threshold. After 5 minutes, the alert fires.
 # Kill background loops when done:
@@ -172,9 +172,13 @@ docker compose logs -f order-service tracking-service notification-service
 
 Output:
 ```
+amuza@amuza:~/Desktop/Amali/AmaliTech-DEG-Project-based-challenges/dev-ops/WatchTower/app$ docker compose logs -f order-service tracking-service notification-service
+WARN[0000] /home/amuza/Desktop/Amali/AmaliTech-DEG-Project-based-challenges/dev-ops/WatchTower/app/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion 
+tracking-service      | {"level":"info","service":"tracking-service","msg":"Listening on port 3002"}
 notification-service  | {"level":"info","service":"notification-service","msg":"Listening on port 3003"}
 order-service         | {"level":"info","service":"order-service","msg":"Listening on port 3001"}
-tracking-service      | {"level":"info","service":"tracking-service","msg":"Listening on port 3002"}
+order-service exited with code 137
+
 ```
 
 ### Command 2: Filter logs to show only errors from a specific service
