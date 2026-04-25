@@ -1,21 +1,36 @@
+version: "3.8"
+
+networks:
+  watchtower_network:
+    driver: bridge
+
 services:
   order-service:
     build: ./order-service
+    container_name: ${ORDER_SERVICE_NAME:-order-service}
     ports:
-      - "3001:3001"
+      - "${ORDER_SERVICE_PORT:-3001}:${ORDER_SERVICE_PORT:-3001}"
     environment:
-      - PORT=3001
+      - PORT=${ORDER_SERVICE_PORT:-3001}
+    networks:
+      - watchtower_network
 
   tracking-service:
     build: ./tracking-service
+    container_name: ${TRACKING_SERVICE_NAME:-tracking-service}
     ports:
-      - "3002:3002"
+      - "${TRACKING_SERVICE_PORT:-3002}:${TRACKING_SERVICE_PORT:-3002}"
     environment:
-      - PORT=3002
+      - PORT=${TRACKING_SERVICE_PORT:-3002}
+    networks:
+      - watchtower_network
 
   notification-service:
     build: ./notification-service
+    container_name: ${NOTIFICATION_SERVICE_NAME:-notification-service}
     ports:
-      - "3003:3003"
+      - "${NOTIFICATION_SERVICE_PORT:-3003}:${NOTIFICATION_SERVICE_PORT:-3003}"
     environment:
-      - PORT=3003
+      - PORT=${NOTIFICATION_SERVICE_PORT:-3003}
+    networks:
+      - watchtower_network
