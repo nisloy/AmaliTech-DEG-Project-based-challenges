@@ -18,7 +18,7 @@ jobs:
           node-version: '18'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
         working-directory: ./dev-ops/DeployReady/app
 
       - name: Run tests
@@ -56,24 +56,16 @@ jobs:
   deploy:
     name: Deploy
     needs: build
-    runs-on: ubuntu-latest
+    # Look at this magic: We tell GitHub to use YOUR server instead of theirs!
+    runs-on: self-hosted
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          envs: GITHUB_REPOSITORY, GITHUB_SHA
-          script: |
-            REPO=$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
-            IMAGE_TAG="ghcr.io/$REPO/app:$GITHUB_SHA"
-            
-            # 1. Stop and remove the old container if it exists
-            docker rm -f kora-app || true
-            
-            # 2. Pull the newly built image from GitHub
-            docker pull $IMAGE_TAG
-            
-            # 3. Run the new container, mapping host port 80 to container port 3000
-            docker run -d --name kora-app -p 80:3000 -e PORT=3000 $IMAGE_TAG
+      - name: Deploy Container
+        run: |
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_TAG="ghcr.io/$REPO/app:${{ github.sha }}"
+          
+          # Since this script is running directly on the EC2 server, 
+          # we just run the Docker commands natively!
+          docker rm -f kora-app || true
+          docker pull $IMAGE_TAG
+          docker run -d --name kora-app -p 80:3000 -e PORT=3000 $IMAGE_TAG
