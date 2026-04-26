@@ -1,0 +1,87 @@
+name: Deploy Pipeline
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./app
+
+      - name: Run tests
+        run: npm test
+        working-directory: ./app
+
+  build:
+    name: Build & Push
+    # Must wait for 'Test' to succeed
+    needs: test
+    runs-on: ubuntu-latest
+    # Need permissions to write packages to GHCR
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Format repository name to lowercase for Docker registry compatibility
+      - name: Downcase Repository Name
+        run: echo "REPO=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+
+      # Log into the GitHub Container Registry (GHCR) using the built-in GITHUB_TOKEN
+      - name: Log into GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build the Docker image and tag it with the Git commit SHA (${{ github.sha }}). Push it to GHCR.
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ env.REPO }}/app:${{ github.sha }},ghcr.io/${{ env.REPO }}/app:latest
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      # Use an SSH action (like appleboy/ssh-action) to connect to the EC2 server using repository secrets
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          # Pass environments to script for building the pull command
+          envs: GITHUB_REPOSITORY, GITHUB_SHA
+          # Once connected, pull the newly tagged image from GHCR and restart the app using docker compose up -d
+          script: |
+            REPO=$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
+            IMAGE_TAG="ghcr.io/$REPO/app:$GITHUB_SHA"
+            
+            # Pull the newly tagged image from GHCR
+            docker pull $IMAGE_TAG
+            
+            # Export the exact image tag so docker-compose uses it (requires updating docker-compose.yml locally)
+            echo "IMAGE=$IMAGE_TAG" > .env
+            
+            # Restart the app
+            docker compose up -d
