@@ -2,7 +2,7 @@
 
 Welcome to the automated deployment and containerization solution for the Kora Analytics API. This repository demonstrates best practices in Docker containerization, security, and CI/CD automation.
 
-## 🏗️ Architecture Overview
+##  Architecture Overview
 
 This project implements a robust, lightweight, and secure pipeline using the following stack:
 
@@ -14,7 +14,7 @@ This project implements a robust, lightweight, and secure pipeline using the fol
 
 By utilizing a **"Pull-based" deployment model** with a GitHub Actions Self-Hosted Runner natively on the EC2 instance, we have completely eliminated the need for inbound SSH rules from GitHub's IP pool, establishing a highly secure network perimeter.
 
-## 🚀 Setup Steps
+## Setup Steps
 
 ### Local Development
 
@@ -54,7 +54,7 @@ All deployments to the production EC2 server are fully automated.
 
 For granular details on the AWS Virtual Machine configuration and manual Docker verification steps, please see our [DEPLOYMENT.md](./DEPLOYMENT.md).
 
-## 🧠 Decisions Made
+##  Decisions Made
 
 - **Alpine Linux Container Base:** Chosen to drastically reduce image size, speed up pipeline transmission times, and minimize the container's security attack surface.
 - **Dependency Caching:** The `Dockerfile` copies `package.json` separate from source code to leverage Docker layer caching, significantly speeding up consecutive CI builds.
