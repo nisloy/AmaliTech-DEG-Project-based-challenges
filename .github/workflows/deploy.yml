@@ -2,7 +2,7 @@ name: Deploy Pipeline
 on:
   push:
     branches:
-      - main # Triggers the workflow on pushes to the main branch
+      - main
 
 jobs:
  # The pipeline is structured into three sequential jobs: test, build, and deploy. Each job has a specific role in ensuring that only high-quality code gets deployed to production.
@@ -65,7 +65,7 @@ jobs:
 
   deploy:
     name: Deploy
-    # Waits for the Docker image to be fully published before trying to pull it means it waits for the build job to complete successfully before starting the deployment
+    # Waits for the Docker image to be fully published before trying to pull
     needs: build
     # Look at this magic: We tell GitHub to use YOUR server instead of theirs!
     runs-on: self-hosted
@@ -76,8 +76,9 @@ jobs:
           REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           IMAGE_TAG="ghcr.io/$REPO/app:${{ github.sha }}"
           
-          # Since this script is running directly on the EC2 server, 
-          # we just run the Docker commands natively!
+          # Capture the currently running image before destroying it (for rollback)
+          CURRENT_IMAGE=$(docker inspect --format='{{.Config.Image}}' kora-app || echo "none")
+          echo "Previous image was: $CURRENT_IMAGE"
           
           # Forcefully stop and remove the old running container if it exists
           docker rm -f kora-app || true
@@ -87,3 +88,20 @@ jobs:
           
           # Start a fresh container, mapping host Port 80 to container Port 3000
           docker run -d --name kora-app -p 80:3000 -e PORT=3000 $IMAGE_TAG
+          
+          # Wait for the application to boot
+          sleep 5
+          
+          # Rollback Check: Verify the /health endpoint
+          if ! curl -s -f http://localhost:80/health > /dev/null; then
+            echo "Health check failed! Initiating rollback..."
+            docker rm -f kora-app || true
+            if [ "$CURRENT_IMAGE" != "none" ]; then
+              echo "Rolling back to previous image: $CURRENT_IMAGE"
+              docker run -d --name kora-app -p 80:3000 -e PORT=3000 $CURRENT_IMAGE
+            else
+              echo "No previous image found to rollback to."
+            fi
+            exit 1 # Fail the pipeline so engineers know the deploy broke
+          fi
+          echo "Deployment successful and healthy!"
