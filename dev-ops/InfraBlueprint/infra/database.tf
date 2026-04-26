@@ -77,8 +77,9 @@ resource "aws_db_instance" "main" {
   max_allocated_storage = 100
 
   # Maintenance & Cost Control
-  skip_final_snapshot = true  # Speeds up terraform destroy and saves costs in this lab
-  multi_az            = false # Single instance for lab (keep costs down)
+  skip_final_snapshot       = false                             # Forces AWS to take a backup right before destroying
+  final_snapshot_identifier = "vela-payments-db-final-snapshot" # Name of the backup file
+  multi_az                  = false   
 
   tags = {
     Name    = "vela-payments-db"
