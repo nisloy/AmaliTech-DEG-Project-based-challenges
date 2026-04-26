@@ -15,7 +15,7 @@ Every time the Kora team wants to deploy a new version of their app, a developer
 
 ### Your Role
 
-You are joining as their first DevOps engineer. The application code already works — your job is to **containerise it, automate the delivery pipeline, and get it running on AWS**.
+You are joining as their first DevOps engineer. The application code already works — your job is to **containerise it, automate the delivery pipeline, and get it running on a cloud platform** (AWS, GCP, Azure, or any other cloud provider you are familiar with).
 
 ---
 
@@ -73,8 +73,8 @@ The pipeline must run these steps **in order** on every push to `main`:
 
 1. **Test** — Run `npm test`. If tests fail, the pipeline stops. Nothing gets deployed.
 2. **Build** — Build the Docker image and tag it with the Git commit SHA.
-3. **Push** — Push the image to a container registry (GitHub Container Registry or AWS ECR).
-4. **Deploy** — Pull the new image on the EC2 server and restart the container.
+3. **Push** — Push the image to a container registry (GitHub Container Registry, AWS ECR, GCR, ACR, or equivalent).
+4. **Deploy** — Pull the new image on your cloud server and restart the container.
 
 Additional requirements:
 
@@ -83,23 +83,24 @@ Additional requirements:
 
 ---
 
-### Part 3 — Deploy to AWS
+### Part 3 — Deploy to the Cloud
 
-**Deliverable:** A running service on AWS and a short `DEPLOYMENT.md` explaining your setup.
+**Deliverable:** A running service on a cloud platform and a short `DEPLOYMENT.md` explaining your setup.
 
-Provision the following manually (via the AWS Console is fine):
+Use **AWS, GCP, Azure, or any other cloud provider you are familiar with**. Provision the following (via the cloud console is fine):
 
-- An **EC2 instance** (`t2.micro`, Amazon Linux 2023) with Docker installed.
-- A **Security Group** that allows:
+- A **virtual machine** (e.g. AWS EC2 `t2.micro`, GCP `e2-micro`, Azure B1s) with Docker installed.
+- A **firewall / security group** that allows:
   - HTTP on port 80 from anywhere
-  - SSH on port 22 **from your IP only** — not `0.0.0.0/0`
-- An **IAM user or role** for the pipeline with only the permissions it needs.
+  - SSH on port 22 **from your IP only** — not open to the world
+- A **service account / IAM user or role** for the pipeline with only the permissions it needs.
 
-At submission time, `GET http://<your-ec2-ip>/health` must return `{ "status": "ok" }`.
+At submission time, `GET http://<your-server-ip>/health` must return `{ "status": "ok" }`.
 
 Document in `DEPLOYMENT.md`:
 
-- How you set up the EC2 instance
+- Which cloud provider and service you used, and why
+- How you set up the virtual machine
 - How you installed Docker and pulled your image
 - How to check if the container is running
 - How to view the application logs
@@ -110,8 +111,8 @@ Document in `DEPLOYMENT.md`:
 
 Pick **one** of the following if you want to go further:
 
-- **Use Terraform** to provision the EC2 instance and Security Group instead of the console.
-- **Add a CloudWatch alarm** that triggers if `/health` stops responding.
+- **Use Terraform** (or your cloud's IaC tool) to provision the VM and firewall rules instead of the console.
+- **Add a cloud monitoring alarm** (e.g. AWS CloudWatch, GCP Cloud Monitoring, Azure Monitor) that triggers if `/health` stops responding.
 - **Implement a rollback step** in the pipeline that re-deploys the previous image if the health check fails after deploy.
 
 Describe what you added and why in your `DEPLOYMENT.md`.
@@ -132,9 +133,9 @@ Describe what you added and why in your `DEPLOYMENT.md`.
 - [ ] `docker compose up --build` starts the app locally
 - [ ] A `.env.example` file is committed (the real `.env` is not)
 - [ ] At least one successful pipeline run is visible in the GitHub Actions tab
-- [ ] `GET /health` on your EC2 public IP returns 200
+- [ ] `GET /health` on your cloud server's public IP returns 200
 - [ ] No secrets or `.pem` files committed to the repository
-- [ ] SSH port 22 is **not** open to `0.0.0.0/0`
+- [ ] SSH port 22 is **not** open to the world (`0.0.0.0/0`)
 - [ ] `DEPLOYMENT.md` is present and covers the four points in Part 3
 - [ ] This README has been replaced with your own documentation
 - [ ] Commit history shows progress over time (not a single upload commit)
