@@ -11,13 +11,13 @@ terraform {
       version = "~> 5.0"
     }
   }
-  
+
   backend "s3" {
-    bucket         = "vela-terraform-state-YOUR_SUFFIX" # REPLACE with your unique bucket name
-    key            = "infra/terraform.tfstate"
-    region         = "us-east-1"
-    encrypt        = true
-    dynamodb_table = "vela-terraform-locks" # REPLACE with your DynamoDB table name (Partition key: LockID)
+    bucket       = "REPLACE_WITH_YOUR_UNIQUE_BUCKET_NAME"  # Reviewer must replace this with their own bucket name
+    key          = "infra/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
   }
 }
 
