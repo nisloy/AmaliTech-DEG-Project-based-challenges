@@ -2,33 +2,40 @@ name: Deploy Pipeline
 on:
   push:
     branches:
-      - main
+      - main # Triggers the workflow on pushes to the main branch
 
 jobs:
+ # The pipeline is structured into three sequential jobs: test, build, and deploy. Each job has a specific role in ensuring that only high-quality code gets deployed to production.
   test:
     name: Test
     runs-on: ubuntu-latest
     steps:
+      # Pulls the repository code into the secure build runner
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Sets up the required Node.js environment
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
+      # Installs all required project dependencies
       - name: Install dependencies
         run: npm install
         working-directory: ./dev-ops/DeployReady/app
 
+      # Executes the test suite; pipeline strictly halts if this fails
       - name: Run tests
         run: npm test
         working-directory: ./dev-ops/DeployReady/app
 
   build:
     name: Build & Push
+    # Ensures this job only executes if the previous test job succeeds
     needs: test
     runs-on: ubuntu-latest
+    # Grants the runner explicit permission to push to GitHub Packages (GHCR)
     permissions:
       contents: read
       packages: write
@@ -36,9 +43,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Formats repo name to lowercase to prevent Docker registry syntax errors
       - name: Downcase Repository Name
         run: echo "REPO=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
 
+      # Authenticates with the registry using the built-in, short-lived token
       - name: Log into GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -46,6 +55,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Builds the new image and tags it securely with the unique commit SHA
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -55,17 +65,25 @@ jobs:
 
   deploy:
     name: Deploy
+    # Waits for the Docker image to be fully published before trying to pull it means it waits for the build job to complete successfully before starting the deployment
     needs: build
     # Look at this magic: We tell GitHub to use YOUR server instead of theirs!
     runs-on: self-hosted
     steps:
       - name: Deploy Container
         run: |
+          # Formats the repository owner and name into lowercase strings
           REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           IMAGE_TAG="ghcr.io/$REPO/app:${{ github.sha }}"
           
           # Since this script is running directly on the EC2 server, 
           # we just run the Docker commands natively!
+          
+          # Forcefully stop and remove the old running container if it exists
           docker rm -f kora-app || true
+          
+          # Pull the newly built image directly from GHCR
           docker pull $IMAGE_TAG
+          
+          # Start a fresh container, mapping host Port 80 to container Port 3000
           docker run -d --name kora-app -p 80:3000 -e PORT=3000 $IMAGE_TAG
