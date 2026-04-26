@@ -39,15 +39,26 @@ sudo usermod -aG docker ec2-user
 ```
 *(Note: Logging out and back in is required for the group changes to take effect.)*
 
-## 5. Deployment & Verification
+## 5. Image Pulling & Deployment
 
-Software delivery is fully automated. When new code is pushed to the `main` branch, the Continuous Delivery pipeline runs tests, builds an immutable image tagged with the Git commit SHA, and pushes it to the registry. 
+Software delivery is fully automated. When new code is pushed to the `main` branch, the Continuous Delivery pipeline runs tests, builds an immutable image tagged with the Git commit SHA, and pushes it to the GitHub Container Registry (GHCR). 
 
-Our GitHub Actions pipeline then automatically authenticates via SSH, pulls the newly tagged image, and restarts the container using Docker Compose.
-
-**To verify the deployment is successfully resolving traffic:**
+Using our Self-Hosted Runner, the EC2 instance automatically pulls the fresh image and restarts it using native Docker commands. Here is exactly how the pipeline pulls the image:
 ```bash
-curl [http://13.60.73.113/health](http://13.60.73.113/health)
+docker pull ghcr.io/<owner>/app:<sha>
+docker rm -f kora-app || true
+docker run -d --name kora-app -p 80:3000 -e PORT=3000 ghcr.io/<owner>/app:<sha>
+```
+
+**How to check if the container is running:**
+SSH into the EC2 instance and execute the process status command. You should see `kora-app` with a status of `Up`:
+```bash
+docker ps
+```
+
+**To verify the deployment is resolving HTTP traffic:**
+```bash
+curl http://13.60.73.113/health
 ```
 **Example of my test:**
 ![Successful Health Check](./docs/test.png)
@@ -57,6 +68,15 @@ curl [http://13.60.73.113/health](http://13.60.73.113/health)
 If anomalies occur, an engineer can investigate the live streaming telemetry directly on the host using:
 
 ```bash
-docker logs -f <container_name>
+docker logs -f kora-app
 ```
-*(Alternatively, `docker compose logs -f api` from within the root application directory)*
+*(Passing the `-f` flag "follows" the live stream, which is the Docker equivalent of `tail -f` in standard Linux).*
+
+## 7. Bonus: Automated Rollback Pipeline
+
+**Objective:** Implement a self-healing rollback step if the newly deployed image fails its health check.
+
+**How it works:**
+In our `deploy.yml`, the pipeline captures the name of the *currently running* container's image before safely destroying it. After the new image boots, the pipeline waits 5 seconds and pings the `/health` endpoint natively from the localhost using `curl`. 
+
+If `curl` fails (returns a non-200 HTTP code or cannot connect), the pipeline immediately trashes the broken container and respins the exact `CURRENT_IMAGE` that was running perfectly prior to the deployment. It then safely exits the CI/CD job with an error, alerting engineers that the code was bad while keeping the production environment stable and online for customers.
