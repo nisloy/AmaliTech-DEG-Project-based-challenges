@@ -49,7 +49,8 @@ Our GitHub Actions pipeline then automatically authenticates via SSH, pulls the 
 ```bash
 curl [http://13.60.73.113/health](http://13.60.73.113/health)
 ```
-
+**Example of my test:**
+![Successful Health Check](./docs/test.png)
 
 ## 6. Log Management
 
