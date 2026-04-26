@@ -1,18 +1,23 @@
-# Deployment Architecture & Configuration
+## 1. Cloud Provider & Architecture Decisions
+**Provider:** Amazon Web Services (AWS)
+**Service:** Elastic Compute Cloud (EC2)
 
-This document outlines the cloud infrastructure and operational procedures for deploying the Kora Analytics platform to AWS.
+**Why AWS EC2?** EC2 was selected because it provides secure, resizable compute capacity in the cloud. We provisioned an **Amazon Linux 2023 `t3.micro` instance**. This specific OS and instance size were chosen because they provide a highly optimized, lightweight, container-ready foundation that fits perfectly within the AWS Free Tier, ensuring zero operational costs for this deployment.
 
-## 1. Infrastructure Setup
+## 2. Security & Virtual Machine Setup
+A custom AWS Security Group (Firewall) was created with strict rules to follow the principle of least privilege:
 
-Our architecture uses AWS to provide secure, cost-effective compute capacity.
+* **HTTP (Port 80):** Opened to the world (`0.0.0.0/0`) to allow legitimate client traffic to reach the Node.js API.
+* **SSH (Port 22):** Restricted strictly to the administrator's local IP address. This completely prevents brute-force attacks and unauthorized access attempts from the public internet.
 
-- **Compute Capacity**: Provisioned an Amazon Linux 2023 `t2.micro` EC2 instance, providing a lightweight, container-ready foundation.
-- **Security Group (Firewall)**:
-  - **HTTP (Port 80)**: Open to the world (`0.0.0.0/0`) to allow legitimate client traffic.
-  - **SSH (Port 22)**: Restricted strictly to the administrator's IP address to prevent brute-force and unauthorized access attempts.
-- **Identity & Access Management (IAM)**: An IAM user/role was created and provisioned with scoped credentials exclusively for the GitHub Actions pipeline, following the principle of least privilege to securely access the server and the container registry.
+## 3. The CI/CD Pipeline (GitHub Self-Hosted Runner)
+Because SSH was locked down for security, GitHub Actions' default cloud runners could not connect to the server to deploy the code. 
 
-## 2. Server Configuration (Docker Installation)
+To solve this without compromising the firewall, we installed a **GitHub Self-Hosted Runner** directly onto the EC2 instance. 
+* The server reaches *out* to GitHub to pull deployment jobs.
+* This requires zero inbound firewall rules, keeping the server completely secure.
+* *Configuration Note:* Amazon Linux 2023 requires the manual installation of `.NET` dependencies (`sudo dnf install libicu -y`) for the runner to operate successfully. The runner was installed as a persistent background service.
+## 4. Server Configuration (Docker Installation)
 
 The following commands were executed on the Amazon Linux 2023 EC2 instance to prepare the container runtime environment:
 
@@ -34,7 +39,7 @@ sudo usermod -aG docker ec2-user
 ```
 *(Note: Logging out and back in is required for the group changes to take effect.)*
 
-## 3. Deployment & Verification
+## 5. Deployment & Verification
 
 Software delivery is fully automated. When new code is pushed to the `main` branch, the Continuous Delivery pipeline runs tests, builds an immutable image tagged with the Git commit SHA, and pushes it to the registry. 
 
@@ -42,10 +47,11 @@ Our GitHub Actions pipeline then automatically authenticates via SSH, pulls the 
 
 **To verify the deployment is successfully resolving traffic:**
 ```bash
-curl http://<YOUR_EC2_PUBLIC_IP>/health
+curl [http://13.60.73.113/health](http://13.60.73.113/health)
 ```
 
-## 4. Log Management
+
+## 6. Log Management
 
 If anomalies occur, an engineer can investigate the live streaming telemetry directly on the host using:
 
