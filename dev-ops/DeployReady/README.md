@@ -1,141 +1,63 @@
-# DeployReady
+# DeployReady: Kora Analytics DevOps Solution
 
-This challenge is designed to test your understanding of core DevOps practices: containerisation, automated pipelines, and cloud deployment.
+Welcome to the automated deployment and containerization solution for the Kora Analytics API. This repository demonstrates best practices in Docker containerization, security, and CI/CD automation.
 
----
+## 🏗️ Architecture Overview
 
-## 1. Business Context
+This project implements a robust, lightweight, and secure pipeline using the following stack:
 
-**Client:** Kora Analytics
-**Industry:** SaaS — Data dashboards for logistics companies
+- **Application:** Node.js Express API
+- **Containerization:** Docker & Docker Compose
+- **CI/CD Pipeline:** GitHub Actions
+- **Cloud Infrastructure:** AWS EC2 (`t3.micro` running Amazon Linux 2023)
+- **Container Registry:** GitHub Container Registry (GHCR)
 
-### The Problem
+By utilizing a **"Pull-based" deployment model** with a GitHub Actions Self-Hosted Runner natively on the EC2 instance, we have completely eliminated the need for inbound SSH rules from GitHub's IP pool, establishing a highly secure network perimeter.
 
-Every time the Kora team wants to deploy a new version of their app, a developer manually SSHs into the server, pulls the code, and restarts the process by hand. There are no automated tests before a release and no way to tell if a deploy broke something until a customer complains.
+## 🚀 Setup Steps
 
-### Your Role
+### Local Development
 
-You are joining as their first DevOps engineer. The application code already works — your job is to **containerise it, automate the delivery pipeline, and get it running on a cloud platform** (AWS, GCP, Azure, or any other cloud provider you are familiar with).
+1. Clone the repository and navigate to the root directory:
+   ```bash
+   git clone <your-repo-url>
+   cd DeployReady
+   ```
 
----
+2. Create your environment variables file from the provided template:
+   ```bash
+   cp .env.example .env
+   ```
 
-## 2. The Application
+3. Start the application locally using Docker Compose:
+   ```bash
+   docker compose up --build
+   ```
 
-A simple Node.js API is provided in the [`app/`](./app/) directory. It has three endpoints:
+4. Verify the API is running at the health endpoint:
+   ```bash
+   curl http://localhost:3000/health
+   ```
 
-| Method | Route      | Description                            |
-| ------ | ---------- | -------------------------------------- |
-| GET    | `/health`  | Returns `{ "status": "ok" }`           |
-| GET    | `/metrics` | Returns uptime and memory usage        |
-| POST   | `/data`    | Accepts a JSON body and echoes it back |
+### Production Deployment
 
-Run it locally:
+All deployments to the production EC2 server are fully automated.
 
-```bash
-cd app
-npm install
-npm start
-```
+1. Ensure the GitHub Actions Self-Hosted Runner is configured as a background service on your EC2 instance.
+2. Push your confirmed code changes to the `main` branch.
+3. The pipeline handles the rest sequentially:
+   - Validates the code via `npm test`.
+   - Builds a fresh Docker image and tags it securely with the exact Git commit SHA.
+   - Pushes the image artifact to GHCR.
+   - Informs the EC2 server to pull the artifact and natively orchestrate the deployment.
+   - Verifies the live production `/health` endpoint and automatically rolls back if the application fails to boot.
 
-Do not change the application logic. Your work is everything around it.
+For granular details on the AWS Virtual Machine configuration and manual Docker verification steps, please see our [DEPLOYMENT.md](./DEPLOYMENT.md).
 
----
+## 🧠 Decisions Made
 
-## 3. The Assignment
-
-### Part 1 — Containerise the App
-
-**Deliverables:** A `Dockerfile` and a `docker-compose.yml` in the root of your repository.
-
-**Dockerfile requirements:**
-
-- The app must run inside a Docker container.
-- The container must accept a `PORT` environment variable.
-- The container must **not** run as the `root` user.
-
-**Docker Compose requirements:**
-
-- Define the app as a service in `docker-compose.yml`.
-- Map port `3000` on the host to the container.
-- Pass the `PORT` variable via an `.env` file (include a `.env.example` with placeholder values).
-- Running the following must start a working API:
-  ```bash
-  docker compose up --build
-  ```
-
----
-
-### Part 2 — Automate the Pipeline
-
-**Deliverable:** A `.github/workflows/deploy.yml` GitHub Actions workflow.
-
-The pipeline must run these steps **in order** on every push to `main`:
-
-1. **Test** — Run `npm test`. If tests fail, the pipeline stops. Nothing gets deployed.
-2. **Build** — Build the Docker image and tag it with the Git commit SHA.
-3. **Push** — Push the image to a container registry (GitHub Container Registry, AWS ECR, GCR, ACR, or equivalent).
-4. **Deploy** — Pull the new image on your cloud server and restart the container.
-
-Additional requirements:
-
-- Secrets (SSH key, registry token) must be stored as **GitHub repository secrets** — never in the code.
-- Add a short comment above each step in the YAML explaining what it does.
-
----
-
-### Part 3 — Deploy to the Cloud
-
-**Deliverable:** A running service on a cloud platform and a short `DEPLOYMENT.md` explaining your setup.
-
-Use **AWS, GCP, Azure, or any other cloud provider you are familiar with**. Provision the following (via the cloud console is fine):
-
-- A **virtual machine** (e.g. AWS EC2 `t2.micro`, GCP `e2-micro`, Azure B1s) with Docker installed.
-- A **firewall / security group** that allows:
-  - HTTP on port 80 from anywhere
-  - SSH on port 22 **from your IP only** — not open to the world
-- A **service account / IAM user or role** for the pipeline with only the permissions it needs.
-
-At submission time, `GET http://<your-server-ip>/health` must return `{ "status": "ok" }`.
-
-Document in `DEPLOYMENT.md`:
-
-- Which cloud provider and service you used, and why
-- How you set up the virtual machine
-- How you installed Docker and pulled your image
-- How to check if the container is running
-- How to view the application logs
-
----
-
-## 4. Bonus (Optional)
-
-Pick **one** of the following if you want to go further:
-
-- **Use Terraform** (or your cloud's IaC tool) to provision the VM and firewall rules instead of the console.
-- **Add a cloud monitoring alarm** (e.g. AWS CloudWatch, GCP Cloud Monitoring, Azure Monitor) that triggers if `/health` stops responding.
-- **Implement a rollback step** in the pipeline that re-deploys the previous image if the health check fails after deploy.
-
-Describe what you added and why in your `DEPLOYMENT.md`.
-
----
-
-## 5. Submission Instructions
-
-1. **Fork** this repository.
-2. Complete all three parts in your fork.
-3. **Replace this README** with your own documentation (architecture overview, setup steps, decisions made).
-4. Submit your repo link via the [online form](https://forms.cloud.microsoft/e/f3FF83LVz3).
-
----
-
-## ⚠️ Pre-Submission Checklist
-
-- [ ] `docker compose up --build` starts the app locally
-- [ ] A `.env.example` file is committed (the real `.env` is not)
-- [ ] At least one successful pipeline run is visible in the GitHub Actions tab
-- [ ] `GET /health` on your cloud server's public IP returns 200
-- [ ] No secrets or `.pem` files committed to the repository
-- [ ] SSH port 22 is **not** open to the world (`0.0.0.0/0`)
-- [ ] `DEPLOYMENT.md` is present and covers the four points in Part 3
-- [ ] This README has been replaced with your own documentation
-- [ ] Commit history shows progress over time (not a single upload commit)
+- **Alpine Linux Container Base:** Chosen to drastically reduce image size, speed up pipeline transmission times, and minimize the container's security attack surface.
+- **Dependency Caching:** The `Dockerfile` copies `package.json` separate from source code to leverage Docker layer caching, significantly speeding up consecutive CI builds.
+- **Non-Root Execution:** The Dockerfile rigorously enforces `USER node` so the application runs with least-privilege, heavily mitigating Docker escape vulnerabilities.
+- **Self-Hosted Runner Integration:** Selected over traditional SSH pipelines to allow the server to securely *pull* changes via outbound HTTPS. This permitted us to lock down Port 22 exclusively to the administrator IP address.
+- **Automated Pipeline Rollbacks:** Ensures production resilience. We capture the running container's state prior to deployment. If the new deployment fails its post-flight `curl` health check, the system instantly self-heals by reverting to the previous working state.
